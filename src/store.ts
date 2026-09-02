@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { fetchLiveNoradTle } from "./tle";
+import { fetchLiveNoradTle, NORAD_CATALOGUE } from "./tle";
 
 /* ============================================================================
  * KesslerShield — client-side decision engine for high-consequence human–AI ops

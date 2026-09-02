@@ -454,6 +454,11 @@ function saveSession(state: Partial<KesslerState>) {
       activeScenarioId: state.activeScenarioId,
       soundEnabled: state.soundEnabled,
       viewportMode: state.viewportMode,
+      satelliteId: state.satelliteId,
+      altitudeKm: state.altitudeKm,
+      activeElements: state.activeElements,
+      nominalElements: state.nominalElements,
+      statusBanner: state.statusBanner,
       auditLog: state.auditLog,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -482,7 +487,16 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
   const saved = loadSession();
   const scId = saved?.activeScenarioId ?? SCENARIOS[0].id;
   const targetSc = SCENARIOS.find((s) => s.id === scId) ?? SCENARIOS[0];
-  const initial = baseFieldsFor(targetSc);
+  const base = baseFieldsFor(targetSc);
+  const initial = {
+    ...base,
+    satelliteId: saved?.satelliteId ?? base.satelliteId,
+    altitudeKm: saved?.altitudeKm ?? base.altitudeKm,
+    activeElements: saved?.activeElements ?? base.activeElements,
+    nominalElements: saved?.nominalElements ?? base.nominalElements,
+    statusBanner: saved?.statusBanner ?? base.statusBanner,
+    auditLog: saved?.auditLog ?? base.auditLog,
+  };
 
   const pushLog: KesslerState["log"] = (e) => {
     const entry: AuditLogEntry = {

@@ -454,11 +454,6 @@ function saveSession(state: Partial<KesslerState>) {
       activeScenarioId: state.activeScenarioId,
       soundEnabled: state.soundEnabled,
       viewportMode: state.viewportMode,
-      satelliteId: state.satelliteId,
-      altitudeKm: state.altitudeKm,
-      activeElements: state.activeElements,
-      nominalElements: state.nominalElements,
-      statusBanner: state.statusBanner,
       auditLog: state.auditLog,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
@@ -487,16 +482,7 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
   const saved = loadSession();
   const scId = saved?.activeScenarioId ?? SCENARIOS[0].id;
   const targetSc = SCENARIOS.find((s) => s.id === scId) ?? SCENARIOS[0];
-  const base = baseFieldsFor(targetSc);
-  const initial = {
-    ...base,
-    satelliteId: saved?.satelliteId ?? base.satelliteId,
-    altitudeKm: saved?.altitudeKm ?? base.altitudeKm,
-    activeElements: saved?.activeElements ?? base.activeElements,
-    nominalElements: saved?.nominalElements ?? base.nominalElements,
-    statusBanner: saved?.statusBanner ?? base.statusBanner,
-    auditLog: saved?.auditLog ?? [],
-  };
+  const initial = baseFieldsFor(targetSc);
 
   const pushLog: KesslerState["log"] = (e) => {
     const entry: AuditLogEntry = {
@@ -1073,28 +1059,11 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
     syncLiveNoradTle: async (noradId = 25544) => {
       const tle = await fetchLiveNoradTle(noradId);
       if (tle) {
-        set((st) => ({
-          satelliteId: `${tle.name} (#${tle.noradId})`,
-          altitudeKm: Math.round(tle.altitudeKm),
-          activeElements: {
-            ...st.activeElements,
-            semiMajorAxisKm: 6378.137 + tle.altitudeKm,
-            inclinationDeg: tle.inclinationDeg,
-          },
-          nominalElements: {
-            ...st.nominalElements,
-            semiMajorAxisKm: 6378.137 + tle.altitudeKm,
-            inclinationDeg: tle.inclinationDeg,
-          },
-          statusBanner: `NORAD TLE SYNC COMPLETE: #${tle.noradId} ${tle.name} — Live track active in RAM`,
-          sceneVersion: st.sceneVersion + 1,
-        }));
-        saveSession(get());
         pushLog({
           channel: "system",
           direction: "info",
-          title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — Live TLE elements active`,
-          output: { line1: tle.line1, line2: tle.line2, altitudeKm: tle.altitudeKm, inclinationDeg: tle.inclinationDeg },
+          title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — Live TLE elements loaded`,
+          output: { line1: tle.line1, line2: tle.line2, altitudeKm: tle.altitudeKm },
           level: "success",
           status: 200,
         });
@@ -1271,13 +1240,12 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
     },
 
     resetSimulation: () => {
-      clearSession();
       const sc =
         SCENARIOS.find((s) => s.id === get().activeScenarioId) ?? SCENARIOS[0];
       const freshLog: AuditLogEntry[] = [
         {
           id: uid(),
-          ts: Date.now() - 3000,
+          ts: Date.now(),
           clock: nowClock(),
           channel: "system",
           direction: "info",
@@ -1285,69 +1253,13 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
           level: "info",
           status: 200,
         },
-        {
-          id: uid(),
-          ts: Date.now() - 2000,
-          clock: nowClock(),
-          channel: "system",
-          direction: "info",
-          title: "Flight Deck ONLINE — Propagator resident in client RAM",
-          level: "info",
-          status: 200,
-        },
-        {
-          id: uid(),
-          ts: Date.now() - 1000,
-          clock: nowClock(),
-          channel: "system",
-          direction: "info",
-          title: "NORAD TLE CATALOG SYNC — 28,412 space objects loaded",
-          level: "info",
-          status: 200,
-        },
-        {
-          id: uid(),
-          ts: Date.now() - 500,
-          clock: nowClock(),
-          channel: "system",
-          direction: "info",
-          title: "Conjunction screening complete — 1 critical event identified",
-          level: "info",
-          status: 200,
-        },
-        {
-          id: uid(),
-          ts: Date.now(),
-          clock: nowClock(),
-          channel: "system",
-          direction: "info",
-          title: `CONJUNCTION ALERT: ${sc.debrisTrack} vs ${sc.satelliteId} at T-${formatTca(sc.baseline.timeToClosestApproachSec)}`,
-          output: {
-            missDistanceMeters: sc.baseline.missDistanceMeters,
-            tca: formatTca(sc.baseline.timeToClosestApproachSec),
-            pc: sc.baseline.collisionProbability,
-          },
-          level: "hazard",
-          status: 409,
-        },
       ];
-      const freshBase = baseFieldsFor(sc);
       set((st) => ({
-        ...freshBase,
+        ...baseFieldsFor(sc),
         sceneVersion: st.sceneVersion + 1,
         auditLog: freshLog,
       }));
-      saveSession({
-        activeScenarioId: sc.id,
-        soundEnabled: get().soundEnabled,
-        viewportMode: get().viewportMode,
-        satelliteId: sc.satelliteId,
-        altitudeKm: freshBase.altitudeKm,
-        activeElements: freshBase.activeElements,
-        nominalElements: freshBase.nominalElements,
-        statusBanner: freshBase.statusBanner,
-        auditLog: freshLog,
-      });
+      clearSession();
     },
   };
 });

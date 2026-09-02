@@ -357,11 +357,99 @@ export default function EarthCanvas() {
     });
     scene.add(shellGroup);
 
-    /* ---- Diagrammatic Schematic Globe (Flat Shading) ---- */
+function createVectorEarthTexture(): THREE.CanvasTexture {
+  if (typeof window === "undefined" || typeof document === "undefined") {
+    return new THREE.CanvasTexture(new Image());
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 1024;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+
+  // Deep Void Ocean Background
+  ctx.fillStyle = "#060A12";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // High-Contrast Latitude / Longitude Graticule Grid (#223652 Luminous Grid)
+  ctx.strokeStyle = "#1C2E47";
+  ctx.lineWidth = 2.0;
+  for (let x = 0; x <= canvas.width; x += 64) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= canvas.height; y += 64) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  // Luminous Equator Axis Line (#f59e0b Amber)
+  ctx.strokeStyle = "#f59e0b";
+  ctx.lineWidth = 3.5;
+  ctx.shadowColor = "#f59e0b";
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height / 2);
+  ctx.lineTo(canvas.width, canvas.height / 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0; // Reset shadow
+
+  // Connected High-Definition Vector Landmass Polygons (Explicitly Isolated Closed Rings)
+  const LANDMASSES: Array<Array<[number, number]>> = [
+    // North America (Cleanly Closed Loop)
+    [[-168, 65], [-160, 71], [-140, 69], [-120, 68], [-95, 67], [-84, 66], [-76, 62], [-64, 60], [-55, 52], [-64, 44], [-70, 43], [-75, 35], [-80, 25], [-88, 30], [-97, 26], [-97, 20], [-105, 20], [-115, 30], [-124, 40], [-124, 48], [-135, 57], [-150, 60], [-168, 65]],
+    // Central America Bridge
+    [[-90, 16], [-83, 9], [-77, 8], [-80, 15], [-90, 16]],
+    // South America (Cleanly Closed Loop)
+    [[-77, 9], [-60, 8], [-50, 0], [-35, -5], [-35, -10], [-40, -20], [-50, -30], [-65, -54], [-75, -50], [-72, -40], [-70, -30], [-76, -14], [-80, -2], [-77, 9]],
+    // Eurasia & Europe
+    [[10, 54], [25, 60], [30, 70], [60, 70], [90, 75], [120, 73], [140, 70], [170, 66], [178, 65], [160, 55], [140, 50], [130, 40], [120, 32], [108, 20], [100, 10], [98, 4], [80, 13], [70, 20], [60, 25], [50, 26], [40, 15], [32, 30], [25, 36], [15, 40], [0, 44], [-9, 38], [-9, 43], [-1, 50], [10, 54]],
+    // Africa
+    [[-5, 35], [10, 37], [25, 32], [33, 28], [43, 12], [51, 11], [40, -10], [33, -28], [20, -34], [15, -23], [10, -5], [0, 5], [-15, 12], [-17, 21], [-5, 35]],
+    // Australia & NZ
+    [[114, -22], [130, -14], [136, -12], [142, -10], [150, -24], [153, -28], [147, -38], [138, -35], [135, -33], [115, -34], [114, -22]],
+    // Greenland
+    [[-55, 60], [-40, 65], [-20, 70], [-18, 80], [-50, 82], [-70, 78], [-55, 60]],
+    // Antarctica
+    [[-179, -70], [179, -70], [179, -89], [-179, -89], [-179, -70]]
+  ];
+
+  ctx.fillStyle = "rgba(14, 26, 43, 0.95)"; // Deep High-Contrast Slate Fill
+  ctx.strokeStyle = "#38bdf8"; // Luminous Laser-Etched Sky Cyan
+  ctx.shadowColor = "#38bdf8"; // Luminous Cyan Glow
+  ctx.shadowBlur = 10;
+  ctx.lineWidth = 5.5;
+
+  LANDMASSES.forEach((poly) => {
+    ctx.beginPath();
+    poly.forEach(([lon, lat], i) => {
+      const x = ((lon + 180) / 360) * canvas.width;
+      const y = ((90 - lat) / 180) * canvas.height;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  });
+  ctx.shadowBlur = 0; // Reset shadow
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  return texture;
+}
+
+    /* ---- Diagrammatic Vector Canvas Globe ---- */
+    const earthTexture = createVectorEarthTexture();
     const earthMat = new THREE.MeshStandardMaterial({
-      color: 0x0A0A08,
-      roughness: 0.9,
-      metalness: 0.1,
+      map: earthTexture,
+      roughness: 0.7,
+      metalness: 0.2,
     });
     const earth = new THREE.Mesh(
       new THREE.SphereGeometry(EARTH_R, 64, 64),
@@ -369,27 +457,53 @@ export default function EarthCanvas() {
     );
     scene.add(earth);
 
-    // Vector wireframe graticule
+    /* ---- Atmospheric Fresnel Rim Shader Glow (#38bdf8 Sky Cyan Rim) ---- */
+    const atmosMat = new THREE.ShaderMaterial({
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        void main() {
+          float intensity = pow(0.7 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 2.8);
+          gl_FragColor = vec4(0.22, 0.74, 0.97, 0.60) * intensity;
+        }
+      `,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+    });
+    const atmosMesh = new THREE.Mesh(new THREE.SphereGeometry(EARTH_R * 1.14, 64, 64), atmosMat);
+    scene.add(atmosMesh);
+
+    // High-Contrast Latitude / Longitude 3D Graticule Grid (#5A564A Muted Gold-Gray)
     const grat = new THREE.LineSegments(
       new THREE.WireframeGeometry(new THREE.SphereGeometry(EARTH_R * 1.002, 36, 24)),
       new THREE.LineBasicMaterial({
-        color: 0x8C887B,
+        color: 0x5A564A,
         transparent: true,
-        opacity: 0.22,
+        opacity: 0.38,
       })
     );
     scene.add(grat);
 
+
+
+    // Luminous Equator Axis Ring (#f59e0b Amber)
     const equator = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints(
         Array.from({ length: 120 }, (_, i) => {
           const a = (i / 120) * Math.PI * 2;
-          return new THREE.Vector3(EARTH_R * 1.005 * Math.cos(a), 0, EARTH_R * 1.005 * Math.sin(a));
+          return new THREE.Vector3(EARTH_R * 1.006 * Math.cos(a), 0, EARTH_R * 1.006 * Math.sin(a));
         })
       ),
-      new THREE.LineBasicMaterial({ color: 0xFFB000, transparent: true, opacity: 0.4 })
+      new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.6 })
     );
-    scene.add(equator);
     equator.rotation.x = Math.PI / 2;
     scene.add(equator);
 

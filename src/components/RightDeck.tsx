@@ -20,11 +20,11 @@ function LogCard({ e, fresh }: { e: AuditLogEntry; fresh: boolean }) {
           : "border-[#2A2822] bg-[#0A0A08] hover:border-[#FFB000]/50"
       }`}
     >
-      <div className="flex items-center justify-between font-mono text-[10.5px]">
-        <div className="flex items-center gap-2 truncate">
-          <span className="text-[#8C887B]">{e.clock}</span>
+      <div className="flex items-start justify-between gap-2 font-mono text-[10.5px] leading-snug">
+        <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
+          <span className="text-[#8C887B] font-bold shrink-0">{e.clock}</span>
           <span
-            className={`px-1.5 py-0.5 font-space text-[9px] font-bold uppercase ${
+            className={`px-1.5 py-0.5 font-space text-[9px] font-bold uppercase shrink-0 ${
               isTool
                 ? "border border-[#FFB000]/40 bg-[#FFB000]/10 text-[#FFB000]"
                 : isHazard
@@ -35,14 +35,14 @@ function LogCard({ e, fresh }: { e: AuditLogEntry; fresh: boolean }) {
             {e.tool || e.channel}
           </span>
           <span
-            className={`truncate font-mono ${
+            className={`font-mono leading-snug break-words ${
               isHazard ? "text-[#C4453D] font-bold" : "text-[#D8D4C8]"
             }`}
           >
             {e.title}
           </span>
         </div>
-        <span className="ml-2 shrink-0">
+        <span className="shrink-0 pt-0.5">
           <StatusPill status={e.status} />
         </span>
       </div>
@@ -65,37 +65,37 @@ function CommandBar() {
   const [history, setHistory] = useState<string[]>([]);
   const [hIdx, setHIdx] = useState(-1);
 
-  const presets = ["inspect risk", "evaluate options", "authorize fire"];
+  const presets = ["inspect risk", "evaluate options", "stage burn", "authorize fire", "emergency deconflict"];
 
-  const submit = () => {
-    if (!value.trim()) return;
+  const exec = (cmd: string) => {
+    const c = cmd.trim();
+    if (!c) return;
     if (soundEnabled) playClickSound();
-    const res = runCommand(value);
+    const res = runCommand(c);
     setReply(res);
-    setHistory((h) => [value, ...h]);
+    setHistory((h) => [c, ...h]);
     setHIdx(-1);
     setValue("");
   };
 
+  const submit = () => exec(value);
+
   return (
-    <div className="border-t border-[#2A2822] bg-[#0A0A08] p-3">
-      <div className="mb-2 flex items-center justify-between font-space text-[10px] font-bold uppercase text-[#FFB000]">
+    <div className="border-t-2 border-[#FFB000]/40 bg-[#0A0A08] p-4 space-y-3 shadow-[0_-4px_20px_rgba(0,0,0,0.8)]">
+      <div className="flex items-center justify-between font-space text-xs font-bold uppercase tracking-wider text-[#FFB000]">
         <span className="flex items-center gap-1.5">
-          <Terminal className="h-3.5 w-3.5 text-[#FFB000]" />
-          Command Plane
+          <Terminal className="h-4 w-4 text-[#FFB000]" />
+          Command Plane & AI Console
+        </span>
+        <span className="font-mono text-[9.5px] font-bold text-[#33FF66] border border-[#33FF66]/30 bg-[#33FF66]/10 px-1.5 py-0.5">
+          READY
         </span>
       </div>
 
       {/* Preset Chips */}
-      <div className="mb-2 flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         {presets.map((p) => (
-          <PromptChip
-            key={p}
-            onClick={() => {
-              if (soundEnabled) playClickSound();
-              setValue(p);
-            }}
-          >
+          <PromptChip key={p} onClick={() => exec(p)}>
             {p}
           </PromptChip>
         ))}
@@ -103,10 +103,10 @@ function CommandBar() {
 
       {reply && (
         <div
-          className={`mb-2 border px-2 py-1 font-mono text-[9.5px] ${
+          className={`border px-3 py-2 font-mono text-[10.5px] font-bold ${
             reply.ok
-              ? "border-[#33FF66]/40 bg-[#33FF66]/10 text-[#D8D4C8]"
-              : "border-[#C4453D]/40 bg-[#C4453D]/10 text-[#D8D4C8]"
+              ? "border-[#33FF66]/50 bg-[#33FF66]/10 text-[#D8D4C8]"
+              : "border-[#C4453D]/50 bg-[#C4453D]/10 text-[#D8D4C8]"
           }`}
         >
           {reply.message}
@@ -115,7 +115,7 @@ function CommandBar() {
 
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 font-mono text-xs text-[#FFB000]">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm font-bold text-[#FFB000]">
             ›
           </span>
           <input
@@ -141,13 +141,13 @@ function CommandBar() {
                 }
               }
             }}
-            placeholder='command console...'
-            className="w-full border border-[#2A2822] bg-[#141310] pl-5 pr-2.5 py-1.5 font-mono text-[11px] text-[#FFB000] placeholder-[#8C887B] transition focus:border-[#FFB000] focus:outline-none"
+            placeholder='type natural language command...'
+            className="w-full border border-[#FFB000]/50 bg-[#141310] pl-7 pr-3 py-2.5 font-mono text-xs font-bold text-[#FFB000] placeholder-[#8C887B] shadow-[0_0_12px_rgba(255,176,0,0.15)] transition focus:border-[#FFB000] focus:shadow-[0_0_18px_rgba(255,176,0,0.3)] focus:outline-none"
           />
         </div>
         <button
           onClick={submit}
-          className="shrink-0 border border-[#FFB000] bg-[#2A2822] px-3 py-1.5 font-space text-[10px] font-bold uppercase text-[#FFB000] hover:bg-[#FFB000] hover:text-[#0A0A08] transition"
+          className="shrink-0 border border-[#FFB000] bg-[#FFB000] px-5 py-2.5 font-space text-xs font-bold uppercase tracking-wider text-[#0A0A08] shadow-[0_0_15px_rgba(255,176,0,0.35)] hover:bg-[#FFA000] active:scale-95 transition"
         >
           Run
         </button>

@@ -1,8 +1,8 @@
 import { useState, type ReactNode } from "react";
 import {
   Activity,
+  AlertTriangle,
   Crosshair,
-  Radar,
   RotateCcw,
   Zap,
 } from "lucide-react";
@@ -13,12 +13,11 @@ import {
   oddsString,
   useKesslerStore,
 } from "../store";
-import { callKesslerTool } from "../webmcp";
 import { RadialGauge, Sparkline } from "./primitives";
 
 function Section({ title, extra }: { title: string; extra?: ReactNode }) {
   return (
-    <div className="mb-2 flex items-center gap-1.5 font-space text-[11px] font-bold uppercase tracking-widest text-[#FFB000]">
+    <div className="mb-2 flex items-center gap-1.5 font-space text-[11px] font-bold uppercase tracking-widest text-[#D8D4C8]">
       {title}
       {extra && <span className="ml-auto font-mono text-[10px] text-[#8C887B]">{extra}</span>}
     </div>
@@ -36,18 +35,24 @@ function HazardBanner() {
   const staged = phase === "STAGED";
 
   const shell = cleared
-    ? "border-[#33FF66]/40 bg-[#33FF66]/5 text-[#D8D4C8]"
+    ? "border-2 border-[#33FF66]/60 bg-[#33FF66]/10 text-[#D8D4C8] shadow-[0_0_15px_rgba(51,255,102,0.2)]"
     : staged
-    ? "border-[#FFB000]/50 bg-[#FFB000]/5 text-[#D8D4C8]"
-    : "border-[#C4453D]/50 bg-[#C4453D]/10 text-[#D8D4C8]";
+    ? "border-2 border-[#FFB000]/60 bg-[#FFB000]/10 text-[#D8D4C8] shadow-[0_0_15px_rgba(255,176,0,0.2)]"
+    : "border-2 border-[#C4453D] bg-[#C4453D]/20 text-[#D8D4C8] shadow-[0_0_22px_rgba(196,69,61,0.4)] animate-pulse";
 
   return (
-    <div className={`relative flex items-center gap-3 border p-3 ${shell}`}>
+    <div className={`relative flex items-start gap-2.5 border p-3.5 transition ${shell}`}>
+      <div className="pt-0.5">
+        <AlertTriangle className={`h-4 w-4 ${cleared ? "text-[#33FF66]" : staged ? "text-[#FFB000]" : "text-[#C4453D]"}`} />
+      </div>
       <div className="min-w-0 flex-1">
-        <div className="font-space text-[10px] font-bold uppercase tracking-wider text-[#8C887B]">
-          {cleared ? "Status: Nominal" : staged ? "Status: Staged" : `Alert Level ${threat}`}
+        <div className="flex items-center justify-between font-space text-[10px] font-bold uppercase tracking-wider">
+          <span className={cleared ? "text-[#33FF66]" : staged ? "text-[#FFB000]" : "text-[#C4453D]"}>
+            {cleared ? "STATUS: NOMINAL" : staged ? "STATUS: BURN STAGED" : `CRITICAL ALERT · LEVEL ${threat}`}
+          </span>
+          {!cleared && <span className="font-mono text-[9px] font-bold text-[#C4453D] bg-[#C4453D]/20 px-1 py-0.2 border border-[#C4453D]/50">HIGH RISK</span>}
         </div>
-        <div className="mt-0.5 font-mono text-xs sm:text-sm font-bold text-[#FFB000] leading-snug break-words">
+        <div className="mt-1 font-mono text-xs sm:text-sm font-bold text-[#FFB000] leading-snug break-words">
           {banner}
         </div>
       </div>
@@ -225,8 +230,8 @@ function StagedBurnCard() {
   return (
     <div className="border border-[#FFB000]/60 bg-[#141310] p-3">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-space text-[10px] font-bold uppercase tracking-wider text-[#FFB000]">
-          <Crosshair className="h-3.5 w-3.5" />
+        <span className="flex items-center gap-1.5 font-space text-[10px] font-bold uppercase tracking-wider text-[#D8D4C8]">
+          <Crosshair className="h-3.5 w-3.5 text-[#FFB000]" />
           Staged Avoidance Vector
         </span>
       </div>
@@ -287,8 +292,8 @@ function TradeStudyCard() {
   return (
     <div className="border border-[#2A2822] bg-[#141310] p-3">
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-space text-[10px] font-bold uppercase tracking-wider text-[#FFB000]">
-          <Activity className="h-3.5 w-3.5" />
+        <span className="flex items-center gap-1.5 font-space text-[10px] font-bold uppercase tracking-wider text-[#D8D4C8]">
+          <Activity className="h-3.5 w-3.5 text-[#FFB000]" />
           Trade Options
         </span>
       </div>
@@ -355,83 +360,23 @@ function CommittedCard() {
   );
 }
 
-/* ------------------------------ agent prompts ------------------ */
+/* ------------------------------ reset controls ------------------ */
 
-function AgentPrompts() {
-  const deriveOptimalBurn = useKesslerStore((s) => s.deriveOptimalBurn);
-  const stagedBurn = useKesslerStore((s) => s.stagedBurn);
-  const phase = useKesslerStore((s) => s.phase);
+function ResetControls() {
+  const soundEnabled = useKesslerStore((s) => s.soundEnabled);
   const runCommand = useKesslerStore((s) => s.runCommand);
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const run = async (id: string, fn: () => void | Promise<unknown>) => {
-    setBusy(id);
-    try {
-      await fn();
-    } finally {
-      setTimeout(() => setBusy(null), 300);
-    }
-  };
-
-  const triggers = [
-    {
-      id: "inspect",
-      label: "Inspect Risk",
-      icon: <Radar className="h-3.5 w-3.5" />,
-      fn: () => callKesslerTool("inspect_conjunction_geometry"),
-    },
-    {
-      id: "trade",
-      label: "Evaluate Options",
-      icon: <Activity className="h-3.5 w-3.5" />,
-      fn: () => callKesslerTool("evaluate_avoidance_options"),
-    },
-    {
-      id: "stage",
-      label: "Stage Burn",
-      icon: <Crosshair className="h-3.5 w-3.5" />,
-      fn: () => callKesslerTool("stage_avoidance_burn", deriveOptimalBurn()),
-    },
-    {
-      id: "commit",
-      label: "Authorize Fire",
-      icon: <Zap className="h-3.5 w-3.5" />,
-      fn: async () => {
-        if (!stagedBurn && phase !== "CLEARED") {
-          await callKesslerTool("stage_avoidance_burn", deriveOptimalBurn());
-        }
-        return callKesslerTool("commit_orbital_maneuver", {
-          authorizationNote: "Authorize and fire thrusters",
-        });
-      },
-    },
-  ];
 
   return (
     <div>
-      <Section title="Quick Actions" />
-      <div className="grid grid-cols-2 gap-1.5">
-        {triggers.map((tr) => (
-          <button
-            key={tr.id}
-            onClick={() => run(tr.id, tr.fn)}
-            className={`flex items-center justify-center gap-1.5 border px-2 py-2 font-space text-[10px] font-bold uppercase transition ${
-              busy === tr.id
-                ? "border-[#FFB000] bg-[#2A2822] text-[#FFB000]"
-                : "border-[#2A2822] bg-[#0A0A08] text-[#8C887B] hover:border-[#FFB000] hover:text-[#D8D4C8]"
-            }`}
-          >
-            <span className="text-[#FFB000]">{tr.icon}</span>
-            <span>{tr.label}</span>
-          </button>
-        ))}
-      </div>
       <button
-        onClick={() => runCommand("reset simulation")}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 border border-[#2A2822] bg-[#0A0A08] py-1.5 font-space text-[10px] font-bold uppercase text-[#8C887B] hover:border-[#C4453D] hover:text-[#C4453D]"
+        onClick={() => {
+          if (soundEnabled) playClickSound();
+          runCommand("reset simulation");
+        }}
+        className="flex w-full items-center justify-center gap-1.5 border border-[#2A2822] bg-[#0A0A08] py-2 font-space text-[10.5px] font-bold uppercase text-[#8C887B] hover:border-[#C4453D] hover:text-[#C4453D] transition"
       >
-        <RotateCcw className="h-3 w-3" />
-        Reset Simulation
+        <RotateCcw className="h-3.5 w-3.5" />
+        Reset Simulation Epoch
       </button>
     </div>
   );
@@ -461,7 +406,7 @@ export default function LeftDeck() {
         <StagedBurnCard />
         <TradeStudyCard />
         <CommittedCard />
-        <AgentPrompts />
+        <ResetControls />
       </div>
 
       <div className="border-t border-[#2A2822] px-4 py-2 bg-[#0A0A08]">

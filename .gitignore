@@ -90,6 +90,12 @@ $RECYCLE.BIN/
 # Project scratch / one-off scripts (not part of the app)
 __drive.mjs
 __diag.mjs
+scratch/
 scratchpad/
 /tmp/
 *.tmp
+
+# Rendered demo media (upload to YouTube / Devpost, not to git)
+*.mp4
+*.webm
+*.mov

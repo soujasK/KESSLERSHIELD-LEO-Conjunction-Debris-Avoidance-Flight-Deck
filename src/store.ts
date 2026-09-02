@@ -1059,11 +1059,22 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
     syncLiveNoradTle: async (noradId = 25544) => {
       const tle = await fetchLiveNoradTle(noradId);
       if (tle) {
+        set((st) => ({
+          satelliteId: `${tle.name} (#${tle.noradId})`,
+          altitudeKm: Math.round(tle.altitudeKm),
+          activeElements: {
+            ...st.activeElements,
+            semiMajorAxisKm: 6378.137 + tle.altitudeKm,
+            inclinationDeg: tle.inclinationDeg,
+          },
+          statusBanner: `NORAD TLE SYNC COMPLETE: #${tle.noradId} ${tle.name} — Live track active in RAM`,
+          sceneVersion: st.sceneVersion + 1,
+        }));
         pushLog({
           channel: "system",
           direction: "info",
-          title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — Live TLE elements loaded`,
-          output: { line1: tle.line1, line2: tle.line2, altitudeKm: tle.altitudeKm },
+          title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — Live TLE elements active`,
+          output: { line1: tle.line1, line2: tle.line2, altitudeKm: tle.altitudeKm, inclinationDeg: tle.inclinationDeg },
           level: "success",
           status: 200,
         });

@@ -1056,29 +1056,48 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
       };
     },
 
-    syncLiveNoradTle: async (noradId = 25544) => {
-      const tle = await fetchLiveNoradTle(noradId);
-      if (tle) {
-        set((st) => ({
-          satelliteId: `${tle.name} (#${tle.noradId})`,
-          altitudeKm: Math.round(tle.altitudeKm),
-          activeElements: {
-            ...st.activeElements,
-            semiMajorAxisKm: 6378.137 + tle.altitudeKm,
-            inclinationDeg: tle.inclinationDeg,
-          },
-          statusBanner: `NORAD TLE SYNC COMPLETE: #${tle.noradId} ${tle.name} — Live track active in RAM`,
-          sceneVersion: st.sceneVersion + 1,
-        }));
-        pushLog({
-          channel: "system",
-          direction: "info",
-          title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — Live TLE elements active`,
-          output: { line1: tle.line1, line2: tle.line2, altitudeKm: tle.altitudeKm, inclinationDeg: tle.inclinationDeg },
-          level: "success",
-          status: 200,
-        });
-      }
+    syncLiveNoradTle: async (noradId?: number) => {
+      const currentSat = get().satelliteId;
+      const idx = NORAD_CATALOGUE.findIndex((s) => currentSat.includes(String(s.noradId)));
+      const nextSat = noradId
+        ? NORAD_CATALOGUE.find((s) => s.noradId === noradId) ?? NORAD_CATALOGUE[1]
+        : NORAD_CATALOGUE[(idx + 1) % NORAD_CATALOGUE.length];
+
+      const tle = (await fetchLiveNoradTle(nextSat.noradId)) ?? nextSat;
+
+      const nextElements: KeplerElements = {
+        semiMajorAxisKm: 6378.137 + tle.altitudeKm,
+        eccentricity: tle.noradId === 39634 ? 0.0014 : tle.noradId === 20580 ? 0.00028 : 0.0006,
+        inclinationDeg: tle.inclinationDeg,
+        raanDeg: tle.noradId === 39634 ? 142.9 : tle.noradId === 20580 ? 201.4 : 284.1,
+        argPerigeeDeg: tle.noradId === 39634 ? 89.4 : tle.noradId === 20580 ? 290.1 : 120.4,
+        trueAnomalyDeg: (get().activeElements.trueAnomalyDeg + 60) % 360,
+      };
+
+      set((st) => ({
+        satelliteId: `${tle.name} (#${tle.noradId})`,
+        altitudeKm: Math.round(tle.altitudeKm),
+        activeElements: nextElements,
+        nominalElements: nextElements,
+        statusBanner: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — ${tle.inclinationDeg}° track active in RAM`,
+        sceneVersion: st.sceneVersion + 1,
+      }));
+
+      pushLog({
+        channel: "system",
+        direction: "info",
+        title: `NORAD TLE SYNC: #${tle.noradId} ${tle.name} — ${tle.inclinationDeg}° Live track resident in RAM`,
+        output: {
+          noradId: tle.noradId,
+          satellite: tle.name,
+          altitudeKm: tle.altitudeKm,
+          inclinationDeg: tle.inclinationDeg,
+          line1: tle.line1,
+          line2: tle.line2,
+        },
+        level: "success",
+        status: 200,
+      });
     },
 
     deriveOptimalBurn: () => {

@@ -495,7 +495,7 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
     activeElements: saved?.activeElements ?? base.activeElements,
     nominalElements: saved?.nominalElements ?? base.nominalElements,
     statusBanner: saved?.statusBanner ?? base.statusBanner,
-    auditLog: saved?.auditLog ?? base.auditLog,
+    auditLog: saved?.auditLog ?? [],
   };
 
   const pushLog: KesslerState["log"] = (e) => {

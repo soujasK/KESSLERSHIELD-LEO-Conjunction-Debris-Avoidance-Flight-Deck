@@ -1331,12 +1331,23 @@ export const useKesslerStore = create<KesslerState>((set, get) => {
           status: 409,
         },
       ];
+      const freshBase = baseFieldsFor(sc);
       set((st) => ({
-        ...baseFieldsFor(sc),
+        ...freshBase,
         sceneVersion: st.sceneVersion + 1,
         auditLog: freshLog,
       }));
-      clearSession();
+      saveSession({
+        activeScenarioId: sc.id,
+        soundEnabled: get().soundEnabled,
+        viewportMode: get().viewportMode,
+        satelliteId: sc.satelliteId,
+        altitudeKm: freshBase.altitudeKm,
+        activeElements: freshBase.activeElements,
+        nominalElements: freshBase.nominalElements,
+        statusBanner: freshBase.statusBanner,
+        auditLog: freshLog,
+      });
     },
   };
 });

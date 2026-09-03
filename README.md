@@ -233,8 +233,7 @@ Vercel, Netlify, GitHub Pages, or Cloudflare Pages — it's just static files.
 Apollo-era **Mission Operations Control Room** console: pure-black ground, phosphor-amber `#FFB000`,
 CRT-green `#33FF66` for nominal, alarm-red `#C4453D` for critical. Space Grotesk for headers,
 JetBrains Mono for telemetry. Scanline overlay, needle gauges, corner-cut tactical frames.
-**Zero emoji.** Every mechanical interaction has a synthesized relay click; the thruster fire has a
-sub-bass rumble.
+**Zero emoji.** Uses a built-in Web Audio API synthesizer for mechanical relay clicks and sub-bass thruster rumbles.
 
 ## Persistence
 

@@ -10,6 +10,8 @@
 
 *OpenAI WebMCP Challenge submission*
 
+🌐 **[LIVE APP DEMO](https://kesslershield-leo-onrender-com.onrender.com)** | 📜 **[MIT LICENSE](LICENSE)** | 🤖 **`document.modelContext` Ready**
+
 </div>
 
 ---

@@ -30,6 +30,14 @@ memory. A screenshot-reading agent **cannot** compute a Euclidean miss distance 
 
 ---
 
+## Why "KesslerShield LEO"?
+
+- **Kessler**: Named after NASA astrophysicist **Donald J. Kessler**, who theorised the catastrophic **Kessler Syndrome** orbital cascade in 1978.
+- **Shield**: Represents our real-time collision avoidance decision engine protecting high-value satellite assets from high-speed space shrapnel.
+- **LEO**: Focuses on Low Earth Orbit (400–700 km altitude), the most heavily congested orbital regime housing space stations and constellation satellites.
+
+---
+
 ## The WebMCP thesis
 
 The web app registers its **client-side astrodynamics engine as tools on `document.modelContext`**.
